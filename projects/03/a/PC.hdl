@@ -1,0 +1,38 @@
+// This file is part of www.nand2tetris.org
+// and the book "The Elements of Computing Systems"
+// by Nisan and Schocken, MIT Press.
+// File name: projects/03/a/PC.hdl
+
+/**
+ * A 16-bit counter with load and reset control bits.
+ * if      (reset[t] == 1) out[t+1] = 0
+ * else if (load[t] == 1)  out[t+1] = in[t]
+ * else if (inc[t] == 1)   out[t+1] = out[t] + 1  (integer addition)
+ * else                    out[t+1] = out[t]
+ */
+// (line 13)
+CHIP PC {
+    IN in[16],load,inc,reset;
+    OUT out[16];
+
+    PARTS: 
+    // Calculate bus for case of reset or inc
+    ALU(x=tempout, y=tempout, zx=true, nx=false, zy=true, ny=false, 
+        f=true, no=false, out=tempreset);
+    ALU(x=tempout, y=tempout, zx=false, nx=true, zy=true, ny=true, 
+        f=true, no=true, out=tempinc);
+
+    // If sel = reset[t]load[t]inc[t], then 100, 101, 110, 111 all should choose
+    //  the reset bus. If 010 or 011, the load bus (i.e. the in bus). 
+    //  If 001, the inc bus.  If 000, doesn't matter since no load occurs.
+    Mux8Way16(a=tempout, b=tempinc, c=in, d=in, e=tempreset, f=tempreset, 
+              g=tempreset, h=tempreset, sel[0]=inc, sel[1]=load, sel[2]=reset,
+              out=newout);
+
+    // In the case of reset[t]=1, load[t]=1, or inc[t]=1, loading occurs:
+    Or(a=reset, b=load, out=temp);
+    Or(a=temp, b=inc, out=newload);
+
+    // Pass appropriate values to the register
+    Register(in=newout, load=newload, out=out, out=tempout); 
+}
